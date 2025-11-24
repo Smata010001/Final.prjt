@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
-import joblib
+from sklearn.model_selection import train_test_split
 
-st.title("Automation Probability Prediction")
+st.title("Automation Probability Predictor")
 
-# --- Load Data and Models ---
 @st.cache_data
 def load_data():
     df = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
@@ -14,67 +13,57 @@ def load_data():
 
 df = load_data()
 
-# Optional: Pre-train your models and save with joblib if you want fast loading
-@st.cache_resource
-def load_model(model_name):
-    # Example: You can use joblib to load saved models, if you've exported after training
-    # return joblib.load(f"{model_name}.joblib")
-    # For demo, we retrain simple models inline (replace with load for actual project)
-    features = [
-        'Average_Salary', 'Years_Experience', 'AI_Exposure_Index',
-        'Tech_Growth_Factor'
-        # add more if needed, but don't include target or non-numeric
-    ]
-    X = df[features]
-    y = df['Automation_Probability_2030']
-    if model_name == "Linear Regression":
-        model = LinearRegression().fit(X, y)
-    else:
-        model = Ridge(alpha=1.0).fit(X, y)
-    return model, features
+# Define feature columns used for prediction
+features = [
+    "Average_Salary", "Years_Experience", "AI_Exposure_Index", "Tech_Growth_Factor"
+    # Add Skill columns if you want, e.g. "Skill_1", "Skill_2"
+]
+target = "Automation_Probability_2030"
 
-# --- Side panel for input ---
-st.sidebar.header("Select Model and Job Features")
+# Split data (for training quick demo models—replace with your best feature engineering/model for final version)
+X = df[features]
+y = df[target]
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-model_option = st.sidebar.selectbox(
-    "Select model", 
+# Sidebar UI for model selection
+model_choice = st.sidebar.selectbox(
+    "Choose regression model:",
     ("Linear Regression", "Ridge Regression")
 )
 
-sample = {}
-sample['Average_Salary'] = st.sidebar.slider(
-    "Average Salary", 
-    int(df['Average_Salary'].min()), int(df['Average_Salary'].max()), 
-    int(df['Average_Salary'].mean())
-)
-sample['Years_Experience'] = st.sidebar.slider(
-    "Years Experience", 
-    int(df['Years_Experience'].min()), int(df['Years_Experience'].max()), 
-    int(df['Years_Experience'].mean())
-)
-sample['AI_Exposure_Index'] = st.sidebar.slider(
-    "AI Exposure Index", 
-    float(df['AI_Exposure_Index'].min()), float(df['AI_Exposure_Index'].max()), 
-    float(df['AI_Exposure_Index'].mean())
-)
-sample['Tech_Growth_Factor'] = st.sidebar.slider(
-    "Tech Growth Factor", 
-    float(df['Tech_Growth_Factor'].min()), float(df['Tech_Growth_Factor'].max()), 
-    float(df['Tech_Growth_Factor'].mean())
-)
-# Add more inputs for skills or categories as needed
+# UI sliders for main feature input (adjust min/max/range as needed)
+st.sidebar.header("Enter job features for prediction:")
+user_input = {}
+for col in features:
+    col_min = float(df[col].min())
+    col_max = float(df[col].max())
+    col_mean = float(df[col].mean())
+    if np.issubdtype(df[col].dtype, np.integer):
+        user_input[col] = st.sidebar.slider(col, int(col_min), int(col_max), int(col_mean))
+    else:
+        user_input[col] = st.sidebar.slider(col, col_min, col_max, float(col_mean), step=0.01)
 
-if st.sidebar.button("Predict"):
-    model, feature_list = load_model(model_option)
-    input_array = np.array([sample[f] for f in feature_list]).reshape(1, -1)
-    prediction = model.predict(input_array)[0]
-    st.success(f"Predicted automation probability by 2030: {prediction:.2f} (0 = not likely, 1 = very likely)")
+input_array = np.array([user_input[f] for f in features]).reshape(1, -1)
 
-st.markdown(
-    """
-    **How does this work?**  
-    - Select your model and fill in the job or skill factors.
-    - Click 'Predict' to see the probability that a job with those characteristics may be automated by 2030.
-    - Try adjusting different features to see their impact!
-    """
-)
+if model_choice == "Linear Regression":
+    model = LinearRegression()
+else:
+    model = Ridge(alpha=1.0)
+
+model.fit(X_train, y_train)  # Train model
+prediction = model.predict(input_array)[0]
+
+st.header("Predicted Automation Risk")
+st.write(f"For a job with these features, our {model_choice} model predicts an automation probability by 2030 of: **{prediction:.2f}**")
+
+# Optionally show predicted vs actual for one of the test jobs (great for demo!)
+st.subheader("Sample Prediction vs Actual (from test set)")
+idx = np.random.choice(X_test.index)
+sample_features = X_test.loc[idx].values.reshape(1, -1)
+sample_true = y_test.loc[idx]
+sample_pred = model.predict(sample_features)[0]
+st.write(f"Sample job features: {X_test.loc[idx].to_dict()}")
+st.write(f"Actual automation probability: {sample_true:.2f}")
+st.write(f"Predicted (by {model_choice}): {sample_pred:.2f}")
+
+st.info("Try different model types and job features in the sidebar to see their impact on predicted automation probability!")
