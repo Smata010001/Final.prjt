@@ -3,106 +3,184 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-st.title("📊 Data Visualization: AI Impact on Jobs (2030)")
+sns.set_theme(style="whitegrid")
+
+st.title("📊 Data Visualization – AI Impact on Jobs (2030)")
 
 @st.cache_data
 def load_data():
-    return pd.read_csv('AI_Impact_on_Jobs_2030.csv')
+    return pd.read_csv("AI_Impact_on_Jobs_2030.csv")
 
 df = load_data()
 
-# --- Univariate Plots ---
-st.subheader("Distribution of Automation Probability (2030)")
-fig, ax = plt.subplots()
-sns.histplot(df["Automation_Probability_2030"], kde=True, ax=ax)
-ax.set_title("Automation Probability Distribution")
-ax.set_xlabel("Automation Probability")
-ax.set_ylabel("Count of Jobs")
-st.pyplot(fig)
-st.caption("Shows whether jobs cluster in low, medium, or high automation risk ranges.")
 
-st.subheader("Distribution of AI Exposure Index")
-fig, ax = plt.subplots()
-sns.histplot(df["AI_Exposure_Index"], kde=True, ax=ax)
-ax.set_title("AI Exposure Index Distribution")
-st.pyplot(fig)
+# ---------------------------------------------------------------------
+# Univariate Distributions
+# ---------------------------------------------------------------------
+st.subheader("1️⃣ Univariate Distributions")
 
-st.subheader("Education Level Counts")
-fig, ax = plt.subplots()
-df["Education_Level"].value_counts().plot(kind='bar', ax=ax)
-ax.set_title("Education Level Distribution")
-ax.set_xlabel("Education Level")
-ax.set_ylabel("Count")
-plt.xticks(rotation=30)
-st.pyplot(fig)
+col1, col2 = st.columns(2)
 
-# --- Bivariate Plots ---
-st.subheader("AI Exposure vs. Automation Probability")
+with col1:
+    st.markdown("**Automation Probability (2030)**")
+    fig, ax = plt.subplots()
+    sns.histplot(
+        data=df,
+        x="Automation_Probability_2030",
+        hue="Risk_Category",
+        kde=True,
+        palette="Set2",
+        ax=ax
+    )
+    ax.set_title("Distribution of Automation Probability (2030)")
+    st.pyplot(fig)
+    st.caption("Shows how risk categories differ in automation probability.")
+
+with col2:
+    st.markdown("**AI Exposure Index**")
+    fig, ax = plt.subplots()
+    sns.histplot(
+        data=df,
+        x="AI_Exposure_Index",
+        hue="Risk_Category",
+        kde=True,
+        palette="Set2",
+        ax=ax
+    )
+    ax.set_title("Distribution of AI Exposure Index")
+    st.pyplot(fig)
+    st.caption("Indicates how AI exposure varies among different job risk levels.")
+
+# Education level counts (full width)
+st.markdown("**Education Level Distribution**")
 fig, ax = plt.subplots()
-sns.scatterplot(
+sns.countplot(
     data=df,
-    x="AI_Exposure_Index",
-    y="Automation_Probability_2030",
+    x="Education_Level",
     hue="Risk_Category",
+    palette="Set2",
     ax=ax
 )
-ax.set_title("AI Exposure vs Automation Risk")
+ax.set_title("Jobs by Education Level and Risk Category")
+plt.xticks(rotation=30, ha="right")
 st.pyplot(fig)
-
-st.caption("Shows whether jobs highly exposed to AI are more likely to be automated.")
-
-st.subheader("Tech Growth Factor vs Automation Probability")
-fig, ax = plt.subplots()
-sns.scatterplot(
-    data=df,
-    x="Tech_Growth_Factor",
-    y="Automation_Probability_2030",
-    hue="Risk_Category",
-    ax=ax
+st.caption(
+    "Shows how many jobs fall into each education category and how they relate to risk."
 )
-ax.set_title("Tech Growth Factor vs Automation Risk")
-st.pyplot(fig)
 
-st.subheader("Automation Probability by Education Level")
+st.markdown("---")
+
+# ---------------------------------------------------------------------
+# Bivariate relationships
+# ---------------------------------------------------------------------
+st.subheader("2️⃣ Relationships Between Features and Automation Risk")
+
+# Two-chart row
+col3, col4 = st.columns(2)
+
+with col3:
+    st.markdown("**AI Exposure vs Automation Probability**")
+    fig, ax = plt.subplots()
+    sns.scatterplot(
+        data=df,
+        x="AI_Exposure_Index",
+        y="Automation_Probability_2030",
+        hue="Risk_Category",
+        palette="Set2",
+        ax=ax
+    )
+    ax.set_title("AI Exposure vs Automation Probability")
+    st.pyplot(fig)
+    st.caption("Shows whether high AI exposure increases automation risk.")
+
+with col4:
+    st.markdown("**Tech Growth vs Automation Probability**")
+    fig, ax = plt.subplots()
+    sns.scatterplot(
+        data=df,
+        x="Tech_Growth_Factor",
+        y="Automation_Probability_2030",
+        hue="Risk_Category",
+        palette="Set2",
+        ax=ax
+    )
+    ax.set_title("Tech Growth vs Automation Probability")
+    st.pyplot(fig)
+    st.caption("Highlights how technological change affects job vulnerability.")
+
+# Boxplot: Automation by Education Level
+st.markdown("**Automation Probability by Education Level**")
 fig, ax = plt.subplots()
 sns.boxplot(
     data=df,
     x="Education_Level",
     y="Automation_Probability_2030",
+    hue="Risk_Category",
+    palette="Set2",
     ax=ax
 )
 ax.set_title("Automation Probability by Education Level")
-plt.xticks(rotation=30)
+plt.xticks(rotation=30, ha="right")
 st.pyplot(fig)
+st.caption(
+    "Shows how automation risk varies across education levels and risk categories."
+)
 
-# --- Correlation Heatmap ---
-st.subheader("Correlation Heatmap")
+st.markdown("---")
+
+# ---------------------------------------------------------------------
+# Correlation heatmap
+# ---------------------------------------------------------------------
+st.subheader("3️⃣ Correlation Between Key Numeric Features")
+
 corr_features = [
-    "Average_Salary", "Years_Experience", "AI_Exposure_Index",
-    "Tech_Growth_Factor", "Automation_Probability_2030"
+    "Average_Salary",
+    "Years_Experience",
+    "AI_Exposure_Index",
+    "Tech_Growth_Factor",
+    "Automation_Probability_2030"
 ]
+
 corr = df[corr_features].corr()
 
 fig, ax = plt.subplots(figsize=(8, 6))
 sns.heatmap(
     corr,
     annot=True,
-    cmap="coolwarm",
     fmt=".2f",
-    annot_kws={'size':8},
+    cmap="coolwarm",
+    cbar_kws={"shrink": 0.7},
     ax=ax
 )
-ax.set_title("Correlation Heatmap of Job Attributes")
-plt.xticks(rotation=45)
+ax.set_title("Correlation Heatmap")
+plt.xticks(rotation=45, ha="right")
+plt.yticks(rotation=0)
 st.pyplot(fig)
+st.caption("Shows which features most strongly correlate with automation probability.")
 
-# --- Salary Filter ---
-st.subheader("Interactive: Filter by Salary Range")
-min_salary, max_salary = int(df['Average_Salary'].min()), int(df['Average_Salary'].max())
-salary_range = st.slider('Select salary range', min_salary, max_salary, (min_salary, max_salary))
-filtered_df = df[(df['Average_Salary'] >= salary_range[0]) & (df['Average_Salary'] <= salary_range[1])]
+st.markdown("---")
 
-st.write(f"Jobs in selected salary range: {filtered_df.shape[0]}")
+# ---------------------------------------------------------------------
+# Interactive Salary Filter
+# ---------------------------------------------------------------------
+st.subheader("4️⃣ Interactive Exploration: Salary and Automation Risk")
+
+min_salary = int(df["Average_Salary"].min())
+max_salary = int(df["Average_Salary"].max())
+
+salary_range = st.slider(
+    "Select salary range:",
+    min_salary,
+    max_salary,
+    (min_salary, max_salary)
+)
+
+filtered_df = df[
+    (df["Average_Salary"] >= salary_range[0]) &
+    (df["Average_Salary"] <= salary_range[1])
+]
+
+st.write(f"Number of jobs in selected salary range: **{filtered_df.shape[0]}**")
 
 fig, ax = plt.subplots()
 sns.scatterplot(
@@ -110,7 +188,14 @@ sns.scatterplot(
     x="AI_Exposure_Index",
     y="Automation_Probability_2030",
     hue="Risk_Category",
+    palette="Set2",
     ax=ax
 )
-ax.set_title("AI Exposure vs Automation Risk (Filtered)")
+ax.set_title("AI Exposure vs Automation (Filtered by Salary)")
+ax.set_xlabel("AI Exposure Index")
+ax.set_ylabel("Automation Probability (2030)")
 st.pyplot(fig)
+
+st.caption(
+    "Lets users explore whether salary impacts the relationship between AI exposure and automation risk."
+)
