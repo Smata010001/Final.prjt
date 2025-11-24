@@ -1,6 +1,18 @@
 import streamlit as st
 from PIL import Image
+import pandas as pd
 
+# Load the dataset (assuming CSV format)
+data = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
+
+# Display the first few rows to understand the structure
+print(data.head())
+
+# Show summary information about columns, datatype, and missing values
+print(data.info())
+
+# Show basic statistics for numerical columns
+print(data.describe())
 st.set_page_config(
     page_title="AI Impact on Jobs — 2030",
     page_icon="🤖",
@@ -58,12 +70,6 @@ Use the sidebar to navigate:
 
 """)
 
-import streamlit as st
-import pandas as pd
-from pathlib import Path
-
-st.set_page_config(
-    page_title="Data Description",
-    page_icon="📊",
-    layout="wide"
 )
+
+
