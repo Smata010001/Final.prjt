@@ -3,67 +3,123 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
 
-st.title("Automation Probability Predictor")
+st.title("🤖 Automation Probability Predictor")
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
-    return df
+    return pd.read_csv("AI_Impact_on_Jobs_2030.csv")
 
 df = load_data()
 
-# Define feature columns used for prediction
+# ----- Features & target -----
 features = [
-    "Average_Salary", "Years_Experience", "AI_Exposure_Index", "Tech_Growth_Factor"
-    # Add Skill columns if you want, e.g. "Skill_1", "Skill_2"
+    "Average_Salary",
+    "Years_Experience",
+    "AI_Exposure_Index",
+    "Tech_Growth_Factor",
 ]
 target = "Automation_Probability_2030"
 
-# Split data (for training quick demo models—replace with your best feature engineering/model for final version)
 X = df[features]
 y = df[target]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Sidebar UI for model selection
-model_choice = st.sidebar.selectbox(
-    "Choose regression model:",
-    ("Linear Regression", "Ridge Regression")
+@st.cache_resource
+def train_models(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Ridge Regression": Ridge(alpha=1.0),
+    }
+
+    trained = {}
+    metrics = {}
+
+    for name, m in models.items():
+        m.fit(X_train, y_train)
+        y_pred = m.predict(X_test)
+        mae = mean_absolute_error(y_test, y_pred)
+        r2 = r2_score(y_test, y_pred)
+        trained[name] = m
+        metrics[name] = {"mae": mae, "r2": r2}
+
+    return trained, metrics
+
+models, metrics = train_models(X, y)
+
+st.write(
+    """
+    Use this page to predict the **probability that a job will be automated by 2030** 
+    based on different job characteristics.
+    """
 )
 
-# UI sliders for main feature input (adjust min/max/range as needed)
-st.sidebar.header("Enter job features for prediction:")
+# ----- Model choice -----
+model_choice = st.selectbox(
+    "Choose a regression model:",
+    ("Linear Regression", "Ridge Regression")
+)
+model = models[model_choice]
+metric = metrics[model_choice]
+
+# ----- Model metrics -----
+col_mae, col_r2 = st.columns(2)
+with col_mae:
+    st.metric("Mean Absolute Error (MAE)", f"{metric['mae']:.3f}")
+with col_r2:
+    st.metric("R² Score", f"{metric['r2']:.3f}")
+
+st.markdown("---")
+
+# ----- Sliders for input -----
+st.subheader("Enter job features to predict automation risk")
+
 user_input = {}
-for col in features:
+c1, c2 = st.columns(2)
+
+for i, col in enumerate(features):
     col_min = float(df[col].min())
     col_max = float(df[col].max())
     col_mean = float(df[col].mean())
-    if np.issubdtype(df[col].dtype, np.integer):
-        user_input[col] = st.sidebar.slider(col, int(col_min), int(col_max), int(col_mean))
+
+    slider_kwargs = {
+        "label": col,
+        "min_value": col_min,
+        "max_value": col_max,
+        "value": col_mean,
+        "step": 0.01,
+    }
+
+    if not np.issubdtype(df[col].dtype, np.floating):
+        slider_kwargs["min_value"] = int(col_min)
+        slider_kwargs["max_value"] = int(col_max)
+        slider_kwargs["value"] = int(col_mean)
+        slider_kwargs["step"] = 1
+
+    # Place sliders in two columns
+    if i % 2 == 0:
+        with c1:
+            user_input[col] = st.slider(**slider_kwargs)
     else:
-        user_input[col] = st.sidebar.slider(col, col_min, col_max, float(col_mean), step=0.01)
+        with c2:
+            user_input[col] = st.slider(**slider_kwargs)
 
 input_array = np.array([user_input[f] for f in features]).reshape(1, -1)
 
-if model_choice == "Linear Regression":
-    model = LinearRegression()
-else:
-    model = Ridge(alpha=1.0)
+st.markdown("---")
 
-model.fit(X_train, y_train)  # Train model
-prediction = model.predict(input_array)[0]
+# ----- Predict button -----
+if st.button("🔮 Predict Automation Probability"):
+    prediction = model.predict(input_array)[0]
 
-st.header("Predicted Automation Risk")
-st.write(f"For a job with these features, our {model_choice} model predicts an automation probability by 2030 of: **{prediction:.2f}**")
+    st.subheader("Predicted Automation Risk (2030)")
+    st.write(
+        f"The **{model_choice}** model predicts an automation probability of "
+        f"**{prediction:.2f}** for a job with these characteristics."
+    )
 
-# Optionally show predicted vs actual for one of the test jobs (great for demo!)
-st.subheader("Sample Prediction vs Actual (from test set)")
-idx = np.random.choice(X_test.index)
-sample_features = X_test.loc[idx].values.reshape(1, -1)
-sample_true = y_test.loc[idx]
-sample_pred = model.predict(sample_features)[0]
-st.write(f"Sample job features: {X_test.loc[idx].to_dict()}")
-st.write(f"Actual automation probability: {sample_true:.2f}")
-st.write(f"Predicted (by {model_choice}): {sample_pred:.2f}")
-
-st.info("Try different model types and job features in the sidebar to see their impact on predicted automation probability!")
+st.info("Adjust the sliders above and click Predict to explore different scenarios.")
