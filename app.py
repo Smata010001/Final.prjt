@@ -12,7 +12,7 @@ Welcome! This app explores the impact of AI on job automation by 2030.
 # Load data for display
 @st.cache_data
 def load_data():
-    df = pd.read_csv('ai_impact_on_jobs_2030.csv')
+    df = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
     return df
 
 df = load_data()
