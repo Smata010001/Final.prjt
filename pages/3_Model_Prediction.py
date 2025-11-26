@@ -53,7 +53,7 @@ models, metrics = train_models(X, y)
 
 st.write(
     """
-    Use this page to predict the **probability that a job will be automated by 2030** 
+    This page predicts the **probability that a job will be automated by 2030** 
     based on different job characteristics.
     """
 )
