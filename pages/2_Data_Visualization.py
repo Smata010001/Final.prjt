@@ -1,201 +1,326 @@
+# pages/1_📊_Data_Visualization.py
+
 import streamlit as st
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-sns.set_theme(style="whitegrid")
-
-st.title("📊 Data Visualization – AI Impact on Jobs (2030)")
+st.set_page_config(
+    page_title="Student Performance – Data Insights",
+    layout="wide",
+)
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("AI_Impact_on_Jobs_2030.csv")
+    df = pd.read_csv("StudentsPerformance.csv")
+    df["overall_score"] = df[["math score", "reading score", "writing score"]].mean(axis=1)
+    return df
 
 df = load_data()
 
-
-# ---------------------------------------------------------------------
-# Univariate Distributions
-# ---------------------------------------------------------------------
-st.subheader("1️⃣ Univariate Distributions")
-
-col1, col2 = st.columns(2)
-
-with col1:
-    st.markdown("**Automation Probability (2030)**")
-    fig, ax = plt.subplots()
-    sns.histplot(
-        data=df,
-        x="Automation_Probability_2030",
-        hue="Risk_Category",
-        kde=True,
-        palette="Set2",
-        ax=ax
-    )
-    ax.set_title("Distribution of Automation Probability (2030)")
-    st.pyplot(fig)
-    st.caption("Shows how risk categories differ in automation probability.")
-
-with col2:
-    st.markdown("**AI Exposure Index**")
-    fig, ax = plt.subplots()
-    sns.histplot(
-        data=df,
-        x="AI_Exposure_Index",
-        hue="Risk_Category",
-        kde=True,
-        palette="Set2",
-        ax=ax
-    )
-    ax.set_title("Distribution of AI Exposure Index")
-    st.pyplot(fig)
-    st.caption("Indicates how AI exposure varies among different job risk levels.")
-
-# Education level counts (full width)
-st.markdown("**Education Level Distribution**")
-fig, ax = plt.subplots()
-sns.countplot(
-    data=df,
-    x="Education_Level",
-    hue="Risk_Category",
-    palette="Set2",
-    ax=ax
-)
-ax.set_title("Jobs by Education Level and Risk Category")
-plt.xticks(rotation=30, ha="right")
-st.pyplot(fig)
+# ---------- PAGE TITLE ----------
+st.title("Explore Student Test Results")
 st.caption(
-    "Shows how many jobs fall into each education category and how they relate to risk."
+    "Understand how student background and school support relate to math, reading, and writing scores."
 )
+
+# ---------- KPI METRICS ----------
+kpi_cols = st.columns(4)
+with kpi_cols[0]:
+    st.metric("Avg math score", f"{df['math score'].mean():.1f}")
+with kpi_cols[1]:
+    st.metric("Avg reading score", f"{df['reading score'].mean():.1f}")
+with kpi_cols[2]:
+    st.metric("Avg writing score", f"{df['writing score'].mean():.1f}")
+with kpi_cols[3]:
+    st.metric("Avg overall score", f"{df['overall_score'].mean():.1f}")
 
 st.markdown("---")
 
-# ---------------------------------------------------------------------
-# Bivariate relationships
-# ---------------------------------------------------------------------
-st.subheader("2️⃣ Relationships Between Features and Automation Risk")
+# ---------- SCORE DISTRIBUTIONS ----------
+st.subheader("Score distributions")
 
-# Two-chart row
-col3, col4 = st.columns(2)
+dist_col1, dist_col2, dist_col3 = st.columns(3)
+score_cols = ["math score", "reading score", "writing score"]
+titles = ["Math score", "Reading score", "Writing score"]
 
-with col3:
-    st.markdown("**AI Exposure vs Automation Probability**")
-    fig, ax = plt.subplots()
-    sns.scatterplot(
-        data=df,
-        x="AI_Exposure_Index",
-        y="Automation_Probability_2030",
-        hue="Risk_Category",
-        palette="Set2",
-        ax=ax
-    )
-    ax.set_title("AI Exposure vs Automation Probability")
-    st.pyplot(fig)
-    st.caption("Shows whether high AI exposure increases automation risk.")
-
-with col4:
-    st.markdown("**Tech Growth vs Automation Probability**")
-    fig, ax = plt.subplots()
-    sns.scatterplot(
-        data=df,
-        x="Tech_Growth_Factor",
-        y="Automation_Probability_2030",
-        hue="Risk_Category",
-        palette="Set2",
-        ax=ax
-    )
-    ax.set_title("Tech Growth vs Automation Probability")
-    st.pyplot(fig)
-    st.caption("Highlights how technological change affects job vulnerability.")
-
-# Boxplot: Automation by Education Level
-st.markdown("**Automation Probability by Education Level**")
-fig, ax = plt.subplots()
-sns.boxplot(
-    data=df,
-    x="Education_Level",
-    y="Automation_Probability_2030",
-    hue="Risk_Category",
-    palette="Set2",
-    ax=ax
-)
-ax.set_title("Automation Probability by Education Level")
-plt.xticks(rotation=30, ha="right")
-st.pyplot(fig)
-st.caption(
-    "Shows how automation risk varies across education levels and risk categories."
-)
+for col, score, title in zip([dist_col1, dist_col2, dist_col3], score_cols, titles):
+    with col:
+        fig, ax = plt.subplots(figsize=(4, 3))
+        sns.histplot(
+            data=df,
+            x=score,
+            bins=15,
+            kde=True,
+            color="#4C72B0",
+            ax=ax,
+        )
+        ax.set_title(title)
+        ax.set_xlabel("Score (0–100)")
+        ax.set_ylabel("Count")
+        st.pyplot(fig, use_container_width=True)
 
 st.markdown("---")
 
-# ---------------------------------------------------------------------
-# Correlation heatmap
-# ---------------------------------------------------------------------
-st.subheader("3️⃣ Correlation Between Key Numeric Features")
+# ---------- IMPACT OF SUPPORT FACTORS ----------
+st.subheader("How support programs relate to scores")
 
-corr_features = [
-    "Average_Salary",
-    "Years_Experience",
-    "AI_Exposure_Index",
-    "Tech_Growth_Factor",
-    "Automation_Probability_2030"
-]
+support_tab1, support_tab2 = st.tabs(["Test preparation", "Lunch type"])
 
-corr = df[corr_features].corr()
+with support_tab1:
+    fig, ax = plt.subplots(figsize=(6, 4))
+    tmp = (
+        df.melt(
+            id_vars=["test preparation course"],
+            value_vars=["math score", "reading score", "writing score"],
+            var_name="Subject",
+            value_name="Score",
+        )
+    )
+    sns.barplot(
+        data=tmp,
+        x="Subject",
+        y="Score",
+        hue="test preparation course",
+        estimator=np.mean,
+        errorbar="ci",
+        palette="Set2",
+        ax=ax,
+    )
+    ax.set_ylabel("Average score")
+    ax.set_xlabel("")
+    ax.set_title("Average score by test preparation status")
+    st.pyplot(fig, use_container_width=True)
+    st.caption("Students who complete the test-prep course tend to score higher on average.")
 
-fig, ax = plt.subplots(figsize=(8, 6))
+with support_tab2:
+    fig, ax = plt.subplots(figsize=(6, 4))
+    tmp = (
+        df.melt(
+            id_vars=["lunch"],
+            value_vars=["math score", "reading score", "writing score"],
+            var_name="Subject",
+            value_name="Score",
+        )
+    )
+    sns.barplot(
+        data=tmp,
+        x="Subject",
+        y="Score",
+        hue="lunch",
+        estimator=np.mean,
+        errorbar="ci",
+        palette="Set1",
+        ax=ax,
+    )
+    ax.set_ylabel("Average score")
+    ax.set_xlabel("")
+    ax.set_title("Average score by lunch type")
+    st.pyplot(fig, use_container_width=True)
+    st.caption("Lunch type (a proxy for economic support) is linked to differences in scores.")
+
+st.markdown("---")
+
+# ---------- PARENTAL EDUCATION ----------
+st.subheader("Overall performance and parental education")
+
+fig, ax = plt.subplots(figsize=(8, 4))
+order = (
+    df.groupby("parental level of education")["overall_score"]
+    .mean()
+    .sort_values()
+    .index
+)
+sns.barplot(
+    data=df,
+    y="parental level of education",
+    x="overall_score",
+    order=order,
+    estimator=np.mean,
+    errorbar="ci",
+    palette="Blues_r",
+    ax=ax,
+)
+ax.set_xlabel("Average overall score")
+ax.set_ylabel("Parental education level")
+st.pyplot(fig, use_container_width=True)
+
+st.markdown("---")
+
+# ---------- GENDER & RACE ROLES ----------
+st.subheader("Scores by gender and race/ethnicity")
+
+fig, ax = plt.subplots(figsize=(7, 4))
+tmp = (
+    df.groupby(["race/ethnicity", "gender"])[
+        ["math score", "reading score", "writing score"]
+    ]
+    .mean()
+    .reset_index()
+)
+tmp["overall_score"] = tmp[["math score", "reading score", "writing score"]].mean(axis=1)
+
+sns.barplot(
+    data=tmp,
+    x="race/ethnicity",
+    y="overall_score",
+    hue="gender",
+    palette="Set2",
+    ax=ax,
+)
+ax.set_xlabel("Race / Ethnicity group")
+ax.set_ylabel("Average overall score")
+ax.set_title("Average overall score by gender and race/ethnicity")
+st.pyplot(fig, use_container_width=True)
+st.caption("Shows performance differences between genders within each race/ethnicity group.")
+
+st.markdown("---")
+
+st.subheader("How gender and support relate to scores")
+
+tab_g_prep, tab_g_lunch = st.tabs(["Gender & test prep", "Gender & lunch"])
+
+with tab_g_prep:
+    fig, ax = plt.subplots(figsize=(7, 4))
+    tmp = (
+        df.groupby(["gender", "test preparation course"])["overall_score"]
+        .mean()
+        .reset_index()
+    )
+    sns.barplot(
+        data=tmp,
+        x="test preparation course",
+        y="overall_score",
+        hue="gender",
+        palette="Set2",
+        ax=ax,
+    )
+    ax.set_xlabel("Test preparation course")
+    ax.set_ylabel("Average overall score")
+    ax.set_title("Average overall score by gender and test prep status")
+    st.pyplot(fig, use_container_width=True)
+
+with tab_g_lunch:
+    fig, ax = plt.subplots(figsize=(7, 4))
+    tmp = (
+        df.groupby(["gender", "lunch"])["overall_score"]
+        .mean()
+        .reset_index()
+    )
+    sns.barplot(
+        data=tmp,
+        x="lunch",
+        y="overall_score",
+        hue="gender",
+        palette="Set1",
+        ax=ax,
+    )
+    ax.set_xlabel("Lunch type")
+    ax.set_ylabel("Average overall score")
+    ax.set_title("Average overall score by gender and lunch type")
+    st.pyplot(fig, use_container_width=True)
+
+st.markdown("---")
+
+st.subheader("Race/ethnicity and test preparation")
+
+fig, ax = plt.subplots(figsize=(7, 4))
+tmp = (
+    df.groupby(["race/ethnicity", "test preparation course"])["overall_score"]
+    .mean()
+    .reset_index()
+)
+sns.barplot(
+    data=tmp,
+    x="race/ethnicity",
+    y="overall_score",
+    hue="test preparation course",
+    palette="Paired",
+    ax=ax,
+)
+ax.set_xlabel("Race / Ethnicity group")
+ax.set_ylabel("Average overall score")
+ax.set_title("Average overall score by race/ethnicity and test prep")
+st.pyplot(fig, use_container_width=True)
+
+st.markdown("---")
+
+# ---------- RELATIONSHIPS BETWEEN SUBJECTS ----------
+st.subheader("Relationships between subjects")
+
+rel_col1, rel_col2 = st.columns(2)
+
+with rel_col1:
+    fig, ax = plt.subplots(figsize=(5, 4))
+    sns.scatterplot(
+        data=df,
+        x="math score",
+        y="reading score",
+        hue="test preparation course",
+        style="lunch",
+        palette="Set2",
+        ax=ax,
+    )
+    ax.set_title("Math vs Reading scores")
+    ax.set_xlabel("Math score")
+    ax.set_ylabel("Reading score")
+    st.pyplot(fig, use_container_width=True)
+
+with rel_col2:
+    fig, ax = plt.subplots(figsize=(5, 4))
+    sns.scatterplot(
+        data=df,
+        x="math score",
+        y="writing score",
+        hue="test preparation course",
+        style="lunch",
+        palette="Set2",
+        ax=ax,
+    )
+    ax.set_title("Math vs Writing scores")
+    ax.set_xlabel("Math score")
+    ax.set_ylabel("Writing score")
+    st.pyplot(fig, use_container_width=True)
+
+# ---------- CORRELATION HEATMAP ----------
+st.markdown("---")
+st.subheader("Correlation between scores")
+
+corr_cols = ["math score", "reading score", "writing score", "overall_score"]
+corr = df[corr_cols].corr()
+
+fig, ax = plt.subplots(figsize=(4, 3))
 sns.heatmap(
     corr,
     annot=True,
     fmt=".2f",
-    cmap="coolwarm",
-    cbar_kws={"shrink": 0.7},
-    ax=ax
+    cmap="Blues",
+    vmin=0,
+    vmax=1,
+    square=True,
+    cbar_kws={"shrink": 0.8},
+    ax=ax,
 )
-ax.set_title("Correlation Heatmap")
-plt.xticks(rotation=45, ha="right")
-plt.yticks(rotation=0)
-st.pyplot(fig)
-st.caption("Shows which features most strongly correlate with automation probability.")
+ax.set_title("Score correlation heatmap")
+st.pyplot(fig, use_container_width=True)
 
+st.caption("Darker squares mean a stronger relationship between two scores.")
+
+# ---------- BOX PLOT BY RACE ----------
 st.markdown("---")
+st.subheader("Score spread by race/ethnicity")
 
-# ---------------------------------------------------------------------
-# Interactive Salary Filter
-# ---------------------------------------------------------------------
-st.subheader("4️⃣ Interactive Exploration: Salary and Automation Risk")
-
-min_salary = int(df["Average_Salary"].min())
-max_salary = int(df["Average_Salary"].max())
-
-salary_range = st.slider(
-    "Select salary range:",
-    min_salary,
-    max_salary,
-    (min_salary, max_salary)
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.boxplot(
+    data=df,
+    x="race/ethnicity",
+    y="overall_score",
+    palette="pastel",
+    ax=ax,
 )
+ax.set_xlabel("Race / Ethnicity group")
+ax.set_ylabel("Overall score")
+ax.set_title("Distribution of overall scores by race/ethnicity")
+st.pyplot(fig, use_container_width=True)
 
-filtered_df = df[
-    (df["Average_Salary"] >= salary_range[0]) &
-    (df["Average_Salary"] <= salary_range[1])
-]
-
-st.write(f"Number of jobs in selected salary range: **{filtered_df.shape[0]}**")
-
-fig, ax = plt.subplots()
-sns.scatterplot(
-    data=filtered_df,
-    x="AI_Exposure_Index",
-    y="Automation_Probability_2030",
-    hue="Risk_Category",
-    palette="Set2",
-    ax=ax
-)
-ax.set_title("AI Exposure vs Automation (Filtered by Salary)")
-ax.set_xlabel("AI Exposure Index")
-ax.set_ylabel("Automation Probability (2030)")
-st.pyplot(fig)
-
-st.caption(
-    "Lets users explore whether salary impacts the relationship between AI exposure and automation risk."
-)

@@ -1,125 +1,104 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, r2_score
 
-st.title("🤖 Automation Probability Predictor")
+sns.set_theme(style="whitegrid")
+
+st.title("📈 Linear Regression Check – Global AI Content Impact")
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("AI_Impact_on_Jobs_2030.csv")
+    return pd.read_csv("Global_AI_Content_Impact_Dataset.csv")
 
 df = load_data()
 
-# ----- Features & target -----
-features = [
-    "Average_Salary",
-    "Years_Experience",
-    "AI_Exposure_Index",
-    "Tech_Growth_Factor",
-]
-target = "Automation_Probability_2030"
-
-X = df[features]
-y = df[target]
-
-@st.cache_resource
-def train_models(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
-    models = {
-        "Linear Regression": LinearRegression(),
-        "Ridge Regression": Ridge(alpha=1.0),
-    }
-
-    trained = {}
-    metrics = {}
-
-    for name, m in models.items():
-        m.fit(X_train, y_train)
-        y_pred = m.predict(X_test)
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        trained[name] = m
-        metrics[name] = {"mae": mae, "r2": r2}
-
-    return trained, metrics
-
-models, metrics = train_models(X, y)
-
 st.write(
     """
-    This page predicts the **probability that a job will be automated by 2030** 
-    based on different job characteristics.
+    This page lets us run a **linear regression** on the new dataset to see whether
+    there is a meaningful relationship between variables (i.e., whether the data
+    behaves like “real” data or more like random noise).
     """
 )
 
-# ----- Model choice -----
-model_choice = st.selectbox(
-    "Choose a regression model:",
-    ("Linear Regression", "Ridge Regression")
+st.subheader("🔍 Dataset Preview")
+st.dataframe(df.head())
+
+# -----------------------------
+# Select target and features
+# -----------------------------
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+
+st.subheader("1️⃣ Choose Target and Features")
+
+target_col = st.selectbox(
+    "Select the target variable (what you want to predict):",
+    numeric_cols,
+    index=numeric_cols.index("Job Loss Due to AI (%)") if "Job Loss Due to AI (%)" in numeric_cols else 0
 )
-model = models[model_choice]
-metric = metrics[model_choice]
 
-# ----- Model metrics -----
-col_mae, col_r2 = st.columns(2)
-with col_mae:
-    st.metric("Mean Absolute Error (MAE)", f"{metric['mae']:.3f}")
-with col_r2:
-    st.metric("R² Score", f"{metric['r2']:.3f}")
+feature_options = [c for c in numeric_cols if c != target_col]
 
-st.markdown("---")
+default_features = feature_options  # start with all others
 
-# ----- Sliders for input -----
-st.subheader("Enter job features to predict automation risk")
+selected_features = st.multiselect(
+    "Select feature columns (inputs for the model):",
+    feature_options,
+    default=default_features
+)
 
-user_input = {}
-c1, c2 = st.columns(2)
+if len(selected_features) == 0:
+    st.warning("Please select at least one feature to run the regression.")
+    st.stop()
 
-for i, col in enumerate(features):
-    col_min = float(df[col].min())
-    col_max = float(df[col].max())
-    col_mean = float(df[col].mean())
+X = df[selected_features]
+y = df[target_col]
 
-    slider_kwargs = {
-        "label": col,
-        "min_value": col_min,
-        "max_value": col_max,
-        "value": col_mean,
-        "step": 0.01,
-    }
+# -----------------------------
+# Train/test split + model
+# -----------------------------
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-    if not np.issubdtype(df[col].dtype, np.floating):
-        slider_kwargs["min_value"] = int(col_min)
-        slider_kwargs["max_value"] = int(col_max)
-        slider_kwargs["value"] = int(col_mean)
-        slider_kwargs["step"] = 1
+model = LinearRegression()
+model.fit(X_train, y_train)
 
-    # Place sliders in two columns
-    if i % 2 == 0:
-        with c1:
-            user_input[col] = st.slider(**slider_kwargs)
-    else:
-        with c2:
-            user_input[col] = st.slider(**slider_kwargs)
+y_pred = model.predict(X_test)
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
 
-input_array = np.array([user_input[f] for f in features]).reshape(1, -1)
+st.subheader("2️⃣ Model Performance")
 
-st.markdown("---")
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Mean Absolute Error (MAE)", f"{mae:.3f}")
+with col2:
+    st.metric("R² Score", f"{r2:.3f}")
 
-# ----- Predict button -----
-if st.button("🔮 Predict Automation Probability"):
-    prediction = model.predict(input_array)[0]
+st.caption(
+    "- **MAE** is the average error between predicted and actual values (lower is better).\n"
+    "- **R²** close to 1 means strong linear relationship, near 0 means weak/none, and negative means the model is worse than just predicting the mean."
+)
 
-    st.subheader("Predicted Automation Risk (2030)")
-    st.write(
-        f"The **{model_choice}** model predicts an automation probability of "
-        f"**{prediction:.2f}** for a job with these characteristics."
-    )
+# -----------------------------
+# Actual vs predicted plot
+# -----------------------------
+st.subheader("3️⃣ Actual vs Predicted")
 
-st.info("Adjust the sliders above and click Predict to explore different scenarios.")
+fig, ax = plt.subplots()
+sns.scatterplot(x=y_test, y=y_pred, ax=ax)
+ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], linestyle="--", color="gray")
+ax.set_xlabel("Actual values")
+ax.set_ylabel("Predicted values")
+ax.set_title(f"Actual vs Predicted – Target: {target_col}")
+st.pyplot(fig)
+
+st.caption(
+    "If the data has a strong linear pattern, points will lie close to the dashed line."
+)
