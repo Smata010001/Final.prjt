@@ -2,31 +2,47 @@ import streamlit as st
 import pandas as pd
 import shap
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 
-st.title("Explainable AI: Feature Importance")
+st.title("Explainable AI: What Drives Math Scores?")
 
-# Load data
-df = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
+@st.cache_data
+def load_data():
+    df = pd.read_csv("StudentsPerformance.csv")
+    return df
 
-# Select relevant features for explainability
-features = ['Average_Salary', 'Years_Experience', 'AI_Exposure_Index', 'Tech_Growth_Factor']
+df = load_data()
+
+features = ["reading score", "writing score"]
+target = "math score"
+
 X = df[features]
-y = df['Automation_Probability_2030']
+y = df[target]
 
-# Train simple model for explanation
-model = LinearRegression().fit(X, y)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
 
-# Calculate SHAP values
-explainer = shap.Explainer(model, X)
-shap_values = explainer(X)
+model = LinearRegression().fit(X_train, y_train)
 
-# Display SHAP plots
-st.subheader("SHAP summary plot (feature impact)")
-shap.summary_plot(shap_values, X, show=False)
-st.pyplot(bbox_inches='tight')
+st.subheader("Model performance (R² on test set)")
+r2 = model.score(X_test, y_test)
+st.write(f"R² score: {r2:.3f}")
+
+st.subheader("Feature importance with SHAP")
+
+explainer = shap.Explainer(model, X_train)
+shap_values = explainer(X_test)
+
+st.write("This summary plot shows how each feature influences the predicted math score.")
+
+st.set_option("deprecation.showPyplotGlobalUse", False)
+shap.summary_plot(shap_values, X_test, show=False)
+st.pyplot(bbox_inches="tight")
 
 st.markdown("""
-- **AI Exposure Index** and **Tech Growth Factor** are major positive drivers for automation risk.
-- Higher **Years Experience** and **Salary** may provide protective effect.
-- Use these insights to understand which factors drive predictions and how individuals or businesses can adapt.
+- Each point represents a student in the test set.
+- The position on the x-axis shows whether that feature pushes the math score prediction up or down.
+- Higher reading and writing scores generally push predicted math scores higher.
+- This helps us understand how performance in one subject relates to performance in another.
 """)

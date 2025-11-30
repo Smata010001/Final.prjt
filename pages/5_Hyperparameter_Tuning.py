@@ -4,30 +4,61 @@ from sklearn.linear_model import Ridge
 from sklearn.model_selection import train_test_split
 import wandb
 
-st.title("Hyperparameter Tuning & Experiment Tracking")
+st.title("Hyperparameter Tuning: Ridge Regression on Math Scores")
 
-# Load data
-df = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
-features = ['Average_Salary', 'Years_Experience', 'AI_Exposure_Index', 'Tech_Growth_Factor']
+@st.cache_data
+def load_data():
+    df = pd.read_csv("StudentsPerformance.csv")
+    return df
+
+df = load_data()
+
+# Features and target
+features = ["reading score", "writing score"]
+target = "math score"
+
 X = df[features]
-y = df['Automation_Probability_2030']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+y = df[target]
 
-st.subheader("Tune Ridge Regression alpha parameter")
-alpha = st.slider("Alpha (Ridge Regularization Strength)", 0.01, 10.0, 1.0)
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+st.subheader("Tune Ridge regularization strength (alpha)")
+alpha = st.slider("Alpha (regularization strength)", 0.01, 20.0, 1.0)
+
+st.write(
+    "Higher alpha means stronger regularization, which can help reduce overfitting "
+    "but might underfit if it is too large."
+)
 
 if st.button("Run tuning experiment"):
-    wandb.init(project="jobs2030-tuning", reinit=True)
+    # Start a Weights & Biases run
+    wandb.init(project="students-performance-tuning", reinit=True)
+
     model = Ridge(alpha=alpha)
     model.fit(X_train, y_train)
-    score = model.score(X_test, y_test)
-    wandb.log({"alpha": alpha, "score": score})
-    st.write(f"Model with α={alpha:.2f} achieves R²={score:.3f}")
+
+    r2_train = model.score(X_train, y_train)
+    r2_test = model.score(X_test, y_test)
+
+    # Log metrics to W&B
+    wandb.log({
+        "alpha": alpha,
+        "r2_train": r2_train,
+        "r2_test": r2_test
+    })
+
+    st.success(f"Run completed! R² train: {r2_train:.3f}, R² test: {r2_test:.3f}")
+    st.write("You can compare this run with others in your Weights & Biases project dashboard.")
+
     wandb.finish()
 else:
-    st.info("Adjust alpha and rerun for best model!")
+    st.info("Select an alpha value and click 'Run tuning experiment' to log a new run to Weights & Biases.")
 
 st.markdown("""
-Visit your W&B dashboard to compare all runs and pick the optimal model setup.
-Present your results and explain what parameter choices improved the model and why.
+- Try several alpha values to see how model performance changes.
+- Look for a value where test R² is high and close to training R².
+- Use the W&B dashboard to compare runs and pick the best alpha for your final model.
 """)
