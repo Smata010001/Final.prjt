@@ -87,7 +87,7 @@ df = load_data()
 model_lr, model_ridge, metrics, X_train, y_train = train_models(df)
 
 # ---------- PAGE HEADER ----------
-st.title("Predict a Student’s Exam Performance")
+st.title("### 🔮 Student Performance Predictor")
 st.caption(
     "Create a student profile and estimate expected exam performance using two different models."
 )
@@ -156,14 +156,14 @@ if st.button("Predict exam performance"):
     pred_write = overall_pred + adjustments["writing score"]
 
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with kpi1:
-        st.metric("Predicted math score", f"{pred_math:.1f}")
-    with kpi2:
-        st.metric("Predicted reading score", f"{pred_read:.1f}")
-    with kpi3:
-        st.metric("Predicted writing score", f"{pred_write:.1f}")
-    with kpi4:
-        st.metric("Predicted overall score", f"{overall_pred:.1f}")
+    with k1:
+        st.metric("📐 Math", f"{pred_math:.1f}")
+    with k2:
+        st.metric("📖 Reading", f"{pred_read:.1f}")
+    with k3:
+        st.metric("✍️ Writing", f"{pred_write:.1f}")
+    with k4:
+        st.metric("⭐ Overall", f"{overall_pred:.1f}")
 
     # Bar chart of predicted scores
     st.markdown("### Predicted subject scores")
@@ -193,7 +193,7 @@ st.caption(
 
 # ---------- WHAT-IF SCENARIOS ----------
 st.markdown("---")
-st.subheader("5. What-if scenarios for this student")
+st.subheader("💡  What-if scenarios for this student")
 
 st.write(
     "Compare how support changes (lunch type, test prep) might affect the predicted overall score "
