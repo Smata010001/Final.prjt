@@ -1,75 +1,78 @@
 import streamlit as st
-from PIL import Image
 import pandas as pd
 
-# Load the dataset (assuming CSV format)
-data = pd.read_csv('AI_Impact_on_Jobs_2030.csv')
+@st.cache_data
+def load_data():
+    df = pd.read_csv("StudentsPerformance.csv")
+    return df
 
-# Display the first few rows to understand the structure
-print(data.head())
+df = load_data()
 
-# Show summary information about columns, datatype, and missing values
-print(data.info())
-
-# Show basic statistics for numerical columns
-print(data.describe())
-st.set_page_config(
-    page_title="AI Impact on Jobs — 2030",
-    page_icon="🤖",
-    layout="wide"
-)
-
-st.title("🤖 AI Impact on Jobs by the year 2030")
-st.subheader("Predicting Job Automation Risk with Machine Learning")
+st.title("Student Performance Data Description")
+st.subheader("Helping schools understand how background factors shape academic outcomes")
 
 st.markdown("""
-## 🎯 Business Goal  
-Companies, employees, and policymakers want to understand **which jobs are most at risk of automation** and **which skills help protect workers from AI disruption**.
+Welcome to **Pro-Sole**, a simple tool that helps schools analyze how a student’s
+background, study habits, and support systems influence their academic performance.
 
-Our app predicts the **probability that a job will be automated by 2030**, using job attributes such as:
-- Required skills  
-- Education level  
-- Industry sector  
-- Routine task intensity  
-- Technological exposure  
-
-These predictions help organizations:  
-- Plan workforce transitions  
-- Identify reskilling needs  
-- Future-proof employees  
-- Guide policy and education strategy  
+Our goal:  
+👉 **Spot students who may need extra help**  
+👉 **Identify which support programs matter most**  
+👉 **Give teachers actionable insights**
 """)
 
-st.markdown("---")
+st.header("About the Data")
+st.write("This dataset contains information about students’ backgrounds and their exam results. Below is a preview:")
+st.dataframe(df.head())
+
+st.header("Key Columns Explained")
+st.markdown("""
+There are 8 columns in total, covering both categorical and numerical variables. 
+The categorical features include gender, race/ethnicity, parental level of education, lunch type, 
+and whether the student completed a test preparation course. The numerical features include 
+scores in math, reading, and writing — each ranging from 0 to 100.
+""")
+
+# ----------------------------
+# Data Description
+# ----------------------------
+st.markdown("""
+### Feature Summary
+- **gender** — Student's gender (male/female)  
+- **race/ethnicity** — Student’s demographic group  
+- **parental level of education** — Highest education level of parents  
+- **lunch** — Lunch program (standard / free-reduced)  
+- **test preparation course** — Completed test-prep course (none / completed)  
+- **math score** — Score in mathematics  
+- **reading score** — Score in reading  
+- **writing score** — Score in writing  
+
+### What this means for your analysis
+These features help schools understand how:  
+- Family education level  
+- Access to meal programs  
+- Test preparation participation  
+
+are connected to academic performance across subjects.
+""")
+# ----------------------------
+# Business Case
+# ----------------------------
+st.header("🏫 Business Case: Why This App Matters")
 
 st.markdown("""
-## 📦 Dataset  
-**Source:** Kaggle — *AI Impact on Jobs 2030*  
-The dataset includes job-level attributes such as:
-- Job Title  
-- Education Requirements  
-- Skills Importance  
-- Routine Task Score  
-- AI Automation Probability (2030 Target Variable)  
+Schools often struggle to understand **which background factors truly influence student
+performance**. By analyzing this data, Pro-Sole helps educators:
 
-You can explore the full details in the **Data Description** page.  
+### 🎯 Identify Students Who Need Support
+See which students may fall behind based on patterns in background + scores.
+
+### 🎯 Understand Which Programs Work
+Test-prep courses, lunch programs, and family education level can impact performance — 
+this app quantifies **how much**.
+
+### 🎯 Make Data-Driven Decisions
+Instead of assumptions, schools get **clear insights** to target help where it matters most.
+
+This empowers teachers, supports students, and improves school outcomes.
 """)
-
-st.markdown("---")
-
-st.markdown("""
-## 🚀 App Structure  
-Use the sidebar to navigate:
-
-1️⃣ **Landing Page** — Business case + mission  
-2️⃣ **Data Description** — Dataset structure and summary  
-3️⃣ **Data Visualization** — Insights that explain patterns  
-4️⃣ **Model Predictions** — Compare 2 ML models  
-5️⃣ **Explainability** — SHAP analysis  
-6️⃣ **Hyperparameter Tuning** — Experiment tracking (W&B)
-
-""")
-
-
-
-
