@@ -126,7 +126,7 @@ st.subheader("2. Choose a model")
 
 model_name = st.radio(
     "Select prediction model",
-    ["Linear regression (baseline)", "Ridge regression (enhanced)"],
+    ["Linear regression", "Ridge regression"],
     horizontal=True,
 )
 
@@ -156,14 +156,15 @@ if st.button("Predict exam performance"):
     pred_write = overall_pred + adjustments["writing score"]
 
     kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    with k1:
+    with kpi1:
         st.metric("📐 Math", f"{pred_math:.1f}")
-    with k2:
+    with kpi2:
         st.metric("📖 Reading", f"{pred_read:.1f}")
-    with k3:
+    with kpi3:
         st.metric("✍️ Writing", f"{pred_write:.1f}")
-    with k4:
+    with kpi4:
         st.metric("⭐ Overall", f"{overall_pred:.1f}")
+
 
     # Bar chart of predicted scores
     st.markdown("### Predicted subject scores")

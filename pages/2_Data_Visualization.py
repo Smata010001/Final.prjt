@@ -177,52 +177,6 @@ st.caption("Shows performance differences between genders within each race/ethni
 
 st.markdown("---")
 
-st.subheader("How gender and support relate to scores")
-
-tab_g_prep, tab_g_lunch = st.tabs(["Gender & test prep", "Gender & lunch"])
-
-with tab_g_prep:
-    fig, ax = plt.subplots(figsize=(7, 4))
-    tmp = (
-        df.groupby(["gender", "test preparation course"])["overall_score"]
-        .mean()
-        .reset_index()
-    )
-    sns.barplot(
-        data=tmp,
-        x="test preparation course",
-        y="overall_score",
-        hue="gender",
-        palette="Set2",
-        ax=ax,
-    )
-    ax.set_xlabel("Test preparation course")
-    ax.set_ylabel("Average overall score")
-    ax.set_title("Average overall score by gender and test prep status")
-    st.pyplot(fig, use_container_width=True)
-
-with tab_g_lunch:
-    fig, ax = plt.subplots(figsize=(7, 4))
-    tmp = (
-        df.groupby(["gender", "lunch"])["overall_score"]
-        .mean()
-        .reset_index()
-    )
-    sns.barplot(
-        data=tmp,
-        x="lunch",
-        y="overall_score",
-        hue="gender",
-        palette="Set1",
-        ax=ax,
-    )
-    ax.set_xlabel("Lunch type")
-    ax.set_ylabel("Average overall score")
-    ax.set_title("Average overall score by gender and lunch type")
-    st.pyplot(fig, use_container_width=True)
-
-st.markdown("---")
-
 st.subheader("Race/ethnicity and test preparation")
 
 fig, ax = plt.subplots(figsize=(7, 4))
@@ -246,42 +200,6 @@ st.pyplot(fig, use_container_width=True)
 
 st.markdown("---")
 
-# ---------- RELATIONSHIPS BETWEEN SUBJECTS ----------
-st.subheader("Relationships between subjects")
-
-rel_col1, rel_col2 = st.columns(2)
-
-with rel_col1:
-    fig, ax = plt.subplots(figsize=(5, 4))
-    sns.scatterplot(
-        data=df,
-        x="math score",
-        y="reading score",
-        hue="test preparation course",
-        style="lunch",
-        palette="Set2",
-        ax=ax,
-    )
-    ax.set_title("Math vs Reading scores")
-    ax.set_xlabel("Math score")
-    ax.set_ylabel("Reading score")
-    st.pyplot(fig, use_container_width=True)
-
-with rel_col2:
-    fig, ax = plt.subplots(figsize=(5, 4))
-    sns.scatterplot(
-        data=df,
-        x="math score",
-        y="writing score",
-        hue="test preparation course",
-        style="lunch",
-        palette="Set2",
-        ax=ax,
-    )
-    ax.set_title("Math vs Writing scores")
-    ax.set_xlabel("Math score")
-    ax.set_ylabel("Writing score")
-    st.pyplot(fig, use_container_width=True)
 
 # ---------- CORRELATION HEATMAP ----------
 st.markdown("---")
