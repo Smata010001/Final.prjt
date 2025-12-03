@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
 import shap
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
@@ -36,10 +37,9 @@ shap_values = explainer(X_test)
 
 st.write("This summary plot shows how each feature influences the predicted math score.")
 
-# remove st.set_option("deprecation.showPyplotGlobalUse", False)
-
+fig, ax = plt.subplots()
 shap.summary_plot(shap_values, X_test, show=False)
-st.pyplot(bbox_inches="tight")
+st.pyplot(fig)
 
 st.markdown("""
 - Each point represents a student in the test set.
