@@ -36,7 +36,8 @@ shap_values = explainer(X_test)
 
 st.write("This summary plot shows how each feature influences the predicted math score.")
 
-st.set_option("deprecation.showPyplotGlobalUse", False)
+# remove st.set_option("deprecation.showPyplotGlobalUse", False)
+
 shap.summary_plot(shap_values, X_test, show=False)
 st.pyplot(bbox_inches="tight")
 
