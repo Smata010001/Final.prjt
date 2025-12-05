@@ -141,7 +141,7 @@ else:
 st.subheader("3. Predicted scores for this student")
 
 if st.button("Predict exam performance"):
-    # Predict overall score
+        # Predict overall score
     overall_pred = current_model.predict(input_df)[0]
 
     # To get subject-level predictions in a simple way,
@@ -178,6 +178,7 @@ if st.button("Predict exam performance"):
     ax.set_ylim(0, 100)
     ax.set_ylabel("Predicted score")
     st.pyplot(fig, use_container_width=True)
+
 
 # ---------- MODEL PERFORMANCE SUMMARY ----------
 st.markdown("---")
@@ -261,7 +262,11 @@ st.pyplot(fig, use_container_width=True)
 # ---------- SIMPLE COEFFICIENT VIEW ----------
 st.markdown("---")
 st.subheader("6. Which factors matter most in the enhanced model?")
-
+st.info(
+    "Bars to the right indicate factors that tend to increase the predicted overall score; "
+    "bars to the left indicate decreases, all else equal.",
+    icon="🧠",
+)
 # Extract coefficients from the Ridge model for a quick interpretability view
 ohe = model_ridge.named_steps["preprocess"].named_transformers_["cat"]
 feature_names = ohe.get_feature_names_out(
