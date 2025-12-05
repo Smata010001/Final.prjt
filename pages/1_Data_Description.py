@@ -7,6 +7,11 @@ def load_data():
     return df
 
 df = load_data()
+st.image(
+    "images/student_ed.png", 
+    use_container_width=True,
+    width=250,
+)
 
 st.title("Student Performance Data Description")
 st.subheader("Helping schools understand how background factors shape academic outcomes")

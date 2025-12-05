@@ -87,7 +87,7 @@ df = load_data()
 model_lr, model_ridge, metrics, X_train, y_train = train_models(df)
 
 # ---------- PAGE HEADER ----------
-st.title("### 🔮 Student Performance Predictor")
+st.title("🔮 Student Performance Predictor")
 st.caption(
     "Create a student profile and estimate expected exam performance using two different models."
 )

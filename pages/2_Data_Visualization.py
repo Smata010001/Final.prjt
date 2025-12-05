@@ -19,6 +19,10 @@ def load_data():
 
 df = load_data()
 
+st.image(
+    "images/data_vizban.png",
+    use_container_width=True,
+)
 # ---------- PAGE TITLE ----------
 st.title("Explore Student Test Results")
 st.caption(
