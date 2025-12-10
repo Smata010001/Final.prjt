@@ -6,11 +6,12 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score   # CHANGED
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 st.set_page_config(
@@ -51,11 +52,19 @@ def train_models(df):
         ]
     )
 
-    # Model 2: Ridge regression (slight regularization)
-    model_ridge = Pipeline(
+    # Model 2: Random Forest with regularization
+    # (shallower trees + larger leaves to reduce overfitting)
+    model_rf = Pipeline(
         steps=[
             ("preprocess", preprocessor),
-            ("model", Ridge(alpha=1.0))
+            ("model", RandomForestRegressor(
+                n_estimators=300,
+                max_depth=6,          # limit depth
+                min_samples_leaf=5,   # require more samples per leaf
+                max_features="sqrt",  # fewer features per split
+                random_state=42,
+                n_jobs=-1,
+            ))
         ]
     )
 
@@ -64,27 +73,43 @@ def train_models(df):
     )
 
     model_lr.fit(X_train, y_train)
-    model_ridge.fit(X_train, y_train)
+    model_rf.fit(X_train, y_train)
 
-    # Evaluate
+    # Evaluate on test set
     preds_lr = model_lr.predict(X_test)
-    preds_ridge = model_ridge.predict(X_test)
+    preds_rf = model_rf.predict(X_test)
+
+    mae_lr = mean_absolute_error(y_test, preds_lr)
+    r2_lr = r2_score(y_test, preds_lr)
+
+    mae_rf = mean_absolute_error(y_test, preds_rf)
+    r2_rf = r2_score(y_test, preds_rf)
+
+    # Simple 5-fold CV on the TRAINING data for more stable R2
+    cv_scores_rf = cross_val_score(
+        model_rf, X_train, y_train,
+        cv=5,
+        scoring="r2",
+        n_jobs=-1,
+    )
+    cv_r2_rf = cv_scores_rf.mean()
 
     metrics = {
         "Linear regression": {
-            "MAE": mean_absolute_error(y_test, preds_lr),
-            "R2": r2_score(y_test, preds_lr),
+            "MAE": mae_lr,
+            "R2": r2_lr,
         },
-        "Ridge regression": {
-            "MAE": mean_absolute_error(y_test, preds_ridge),
-            "R2": r2_score(y_test, preds_ridge),
+        "Random forest": {
+            "MAE": mae_rf,
+            "R2": r2_rf,
+            "CV_R2 (train, 5-fold)": cv_r2_rf,   # extra info
         },
     }
 
-    return model_lr, model_ridge, metrics, X_train, y_train
+    return model_lr, model_rf, metrics, X_train, y_train
 
 df = load_data()
-model_lr, model_ridge, metrics, X_train, y_train = train_models(df)
+model_lr, model_rf, metrics, X_train, y_train = train_models(df)
 
 # ---------- PAGE HEADER ----------
 st.title("🔮 Student Performance Predictor")
@@ -126,7 +151,7 @@ st.subheader("2. Choose a model")
 
 model_name = st.radio(
     "Select prediction model",
-    ["Linear regression", "Ridge regression"],
+    ["Linear regression", "Random forest"],
     horizontal=True,
 )
 
@@ -134,19 +159,15 @@ if model_name.startswith("Linear"):
     current_model = model_lr
     model_key = "Linear regression"
 else:
-    current_model = model_ridge
-    model_key = "Ridge regression"
+    current_model = model_rf
+    model_key = "Random forest"
 
 # ---------- PREDICTION ----------
 st.subheader("3. Predicted scores for this student")
 
 if st.button("Predict exam performance"):
-        # Predict overall score
     overall_pred = current_model.predict(input_df)[0]
 
-    # To get subject-level predictions in a simple way,
-    # assume each subject is close to overall with small adjustments
-    # based on training set mean differences.
     subj_means = df[["math score", "reading score", "writing score"]].mean()
     overall_mean = df["overall_score"].mean()
     adjustments = subj_means - overall_mean
@@ -165,8 +186,6 @@ if st.button("Predict exam performance"):
     with kpi4:
         st.metric("⭐ Overall", f"{overall_pred:.1f}")
 
-
-    # Bar chart of predicted scores
     st.markdown("### Predicted subject scores")
     fig, ax = plt.subplots(figsize=(5, 3))
     sns.barplot(
@@ -179,7 +198,6 @@ if st.button("Predict exam performance"):
     ax.set_ylabel("Predicted score")
     st.pyplot(fig, use_container_width=True)
 
-
 # ---------- MODEL PERFORMANCE SUMMARY ----------
 st.markdown("---")
 st.subheader("4. How well do the models perform overall?")
@@ -189,9 +207,9 @@ st.dataframe(metrics_df, use_container_width=True)
 
 st.caption(
     "MAE = average absolute error in predicted overall score (lower is better). "
-    "R² = proportion of variance explained (closer to 1 is better)."
+    "R² = proportion of variance explained on the test set (closer to 1 is better). "
+    "CV_R2 shows 5-fold cross-validated R² on the training data for the random forest."
 )
-
 
 # ---------- WHAT-IF SCENARIOS ----------
 st.markdown("---")
@@ -205,10 +223,8 @@ st.write(
 scenario_base = input_dict.copy()
 scenarios = []
 
-# Baseline
 scenarios.append({"Scenario": "Current profile", **scenario_base})
 
-# If test prep completed
 if scenario_base["test preparation course"] == "none":
     s = scenario_base.copy()
     s["test preparation course"] = "completed"
@@ -218,7 +234,6 @@ else:
     s["test preparation course"] = "none"
     scenarios.append({"Scenario": "Does NOT do test prep", **s})
 
-# If lunch changed
 if scenario_base["lunch"] == "standard":
     s = scenario_base.copy()
     s["lunch"] = "free/reduced"
@@ -230,8 +245,7 @@ else:
 
 scenarios_df = pd.DataFrame(scenarios)
 
-# Predict for each scenario using the enhanced model
-scenario_preds = model_ridge.predict(
+scenario_preds = model_rf.predict(
     scenarios_df[
         ["gender", "race/ethnicity", "parental level of education", "lunch", "test preparation course"]
     ]
@@ -259,34 +273,34 @@ ax.set_title("Effect of support changes on predicted overall score")
 plt.xticks(rotation=15, ha="right")
 st.pyplot(fig, use_container_width=True)
 
-# ---------- SIMPLE COEFFICIENT VIEW ----------
+# ---------- IMPORTANCE VIEW ----------
 st.markdown("---")
-st.subheader("6. Which factors matter most in the enhanced model?")
+st.subheader("6. Which factors matter most in the random forest?")
 st.info(
-    "Bars to the right indicate factors that tend to increase the predicted overall score; "
-    "bars to the left indicate decreases, all else equal.",
+    "Higher importance values mean the feature is more useful for splitting the trees in the forest.",
     icon="🧠",
 )
-# Extract coefficients from the Ridge model for a quick interpretability view
-ohe = model_ridge.named_steps["preprocess"].named_transformers_["cat"]
+
+ohe = model_rf.named_steps["preprocess"].named_transformers_["cat"]
 feature_names = ohe.get_feature_names_out(
     ["gender", "race/ethnicity", "parental level of education", "lunch", "test preparation course"]
 )
-coefs = model_ridge.named_steps["model"].coef_
 
-coef_df = pd.DataFrame(
-    {"Feature": feature_names, "Coefficient": coefs}
-).sort_values(by="Coefficient", key=np.abs, ascending=False)
+importances = model_rf.named_steps["model"].feature_importances_
 
-top_coef = coef_df.head(8)
+importance_df = pd.DataFrame(
+    {"Feature": feature_names, "Importance": importances}
+).sort_values(by="Importance", ascending=False)
+
+top_importance = importance_df.head(8)
 
 fig, ax = plt.subplots(figsize=(7, 4))
 sns.barplot(
-    data=top_coef,
-    x="Coefficient",
+    data=top_importance,
+    x="Importance",
     y="Feature",
-    palette="coolwarm",
+    palette="viridis",
     ax=ax,
 )
-ax.set_title("Top factors influencing predicted overall score")
+ax.set_title("Most important factors in the random forest")
 st.pyplot(fig, use_container_width=True)
